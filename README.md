@@ -17,11 +17,9 @@ It works on given database in SQLite, and imdbapi using Python 3
     * Language
     * Cast (1 letter is enough for it to work)
     * Ratio (Won/Nominated), no condition needed
-    * NomOsc (Nominated for oscars, but not winners), no condition needed
-    * Income (If income was bigger than 100,000,000$), no condition needed
-
-
-4. Comparing multiple movies by:
+    * NomOsc (Nominated for oscars, but not winners), no condition 
+    * Income (If income was bigger than 100,000,000$), no condition 
+4. Comparing multiple movies (Shows only winner in given category) by:
    * "python Movies.py --compare_by [condition]
    * possible conditions are:
    * IMDb_Rating
@@ -30,7 +28,6 @@ It works on given database in SQLite, and imdbapi using Python 3
    * Oscars (most wins)
    * Most_nominations (most nominations)
    * Runtime
-   Shows only winner in given category
 5. Adding movies to database:
    * "python Movies.py --add "Movie1" "Movie2""
    movies are automatically updated after adding

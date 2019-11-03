@@ -142,6 +142,7 @@ class Movies_Info:
             command = command[:-4]+";"
             self.cur.execute(command)
             self.last_fetch = self.cur.fetchall()
+            return movies_with_good_ratio
             if out:
                 for row in self.last_fetch:
                     print(row[0] + " Ratio: " + str(movies_with_good_ratio[row[0]]))
@@ -167,7 +168,7 @@ class Movies_Info:
             self.last_fetch = self.cur.fetchall()
         else:
             x = '"{}"'.format(column)
-            self.cur.execute("SELECT TITLE, {} FROM MOVIES WHERE instr({}, ?)".format(column, x), (data,))
+            self.cur.execute("SELECT TITLE, {} FROM MOVIES WHERE instr({}, ?)".format(x, x), (data,))
             self.last_fetch = self.cur.fetchall()
         if out:
             for row in self.last_fetch:
@@ -211,14 +212,14 @@ class Movies_Info:
             
     def compare_movies(self, attribute, compared_ones=0, out=0):
         all_found = {}
-        if attribute == 'MOST_NOMINATIONS':
+        if attribute.upper() == 'MOST_NOMINATIONS':
             all_found = self.find_with_regex('\d+ nomina', compared_ones)
-        elif attribute == 'ALL_AWARDS':
+        elif attribute.upper() == 'ALL_AWARDS':
             all_found = self.find_with_regex('\d+ win', compared_ones)
-        elif attribute == 'OSCARS':
+        elif attribute.upper() == 'OSCARS':
             all_found = self.find_with_regex('on \d+ Osc', compared_ones)
         elif compared_ones:
-            self.sort_database({attribute:'DESC'}, compared_ones)
+            self.sort_database({attribute.upper():'DESC'}, compared_ones)
             all_found[self.last_fetch[0][0]] = str(self.last_fetch[0][1])
         else:
             self.sort_database({attribute:'DESC'})
@@ -245,9 +246,10 @@ class Movies_Info:
         x = self.compare_movies('IMDb_Rating')
         for key in x:
             print("| IMDB Rating | {} | {} |".format(key,x[key]))
+
+
+
 Movies = Movies_Info("movies.sqlite")
-print(sys.argv)
-sys.argv = ['Objective.py', '--compare', 'oscars', 'Memento', 'Fight Club']
 if sys.argv[1] == '--sort_by':
     if '--defasc' in sys.argv:
         default = 'ASC'
@@ -278,8 +280,9 @@ if sys.argv[1] == '--sort_by':
             data.append(str(column))
             i+=1
         print(to_print % tuple(data))
-#        column[0] +"|"+str(column[1]) +"|"+str(column[2]))
 elif sys.argv[1] == '--filter_by':
+    if len(sys.argv) < 4:
+        sys.argv.append(sys.argv[2])
     Movies.filtered_data(sys.argv[2].upper(), str(sys.argv[3]))
     print("| Title | {} |".format(sys.argv[2]))
     for row in Movies.last_fetch:
