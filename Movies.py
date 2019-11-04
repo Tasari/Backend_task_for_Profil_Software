@@ -6,6 +6,9 @@ import re
 import sys
 class Movies_Info:
     def __init__(self, database):
+        '''
+        Creates connection to database
+        '''
         conn = None
         try:
             conn = sqlite3.connect(database)
@@ -15,19 +18,19 @@ class Movies_Info:
         self.cur = conn.cursor()        
         self.cur.execute('PRAGMA table_info(MOVIES)')
         self.table_columns_info = self.cur.fetchall()
-        self.all_columns = []
+        self.all_columns = []#ALL COLUMNS IN DATABASE
         for column in self.table_columns_info:
             self.all_columns.append(column[1])
         self.last_fetch = 0
         self.cur.execute('SELECT TITLE FROM MOVIES')
         titles = self.cur.fetchall()
-        self.all_titles = []
+        self.all_titles = []#All titles in the database to assure they won't appear twice
         for title in titles:
             self.all_titles.append(title[0])
             
     def print_database(self):
         '''
-        Print all rows in the tasks table
+        Print all rows in the movies table
         '''
         self.cur.execute("SELECT * FROM MOVIES")
         self.last_fetch = self.cur.fetchall()
@@ -35,6 +38,9 @@ class Movies_Info:
             print(row)
 
     def print_last_fetch(self):
+        '''
+        Prints last fetch after used method
+        '''
         for row in self.last_fetch:
             print(row)
 
@@ -42,7 +48,7 @@ class Movies_Info:
         '''
         Updating single movie in database
         '''
-        if Title.endswith(' '):
+        if Title.endswith(' '):#Assures that movie title don't end with space, like in "The Shawshank Redemption"
             target = Title[:-1]
             self.cur.execute("""UPDATE MOVIES SET TITLE = ? WHERE TITLE = ?""",(target, Title))
         request = requests.get("http://www.omdbapi.com/", 
@@ -52,17 +58,15 @@ class Movies_Info:
         all_criteria = ('Year', 'Runtime', 'Genre', 'Director', 'Actors', 'Writer', 'Language', 'Country', 'Awards', 'imdbRating', 'imdbVotes', 'BoxOffice')           
         it = iter(self.all_columns)
         next(it)
-        next(it)
+        next(it)#Starts iteration from Year column in database
         index=0
         for column in it:
-            if len(dictionary['Year'])>4:
+            if len(dictionary['Year'])>4:#In case Year is invalid like in 'Ben Hur'
                 dictionary['Year'] = re.search("^\d{4}", dictionary['Year']).group(0)
-            try:
+            try:#Assures that if there is no given column in data from OMDb program don't crash
                 x = dictionary[all_criteria[index]]
             except KeyError:
                 x = 'N/A'
-
-
             try:
                 self.cur.execute("""UPDATE MOVIES SET {} = ? WHERE TITLE = ?""".format(column),(x, dictionary['Title']))
                 index+=1
@@ -83,7 +87,7 @@ class Movies_Info:
         '''
         Sorting database by multiple columns, main column is given as argument
         '''
-        string=''
+        string=''#String that collects command that should be used in execute
         for table_col in columns.keys():
             if table_col == 'CAST':
                 x = '"{}"'.format(table_col)
@@ -99,19 +103,18 @@ class Movies_Info:
             command = command[:-3]
         command += 'ORDER BY '
         for col in columns.keys():
-            if col == 'BOX_OFFICE':
+            if col == 'BOX_OFFICE':#Makes Box office comparable
                 added_condition = "CAST(REPLACE(SUBSTR({},2), ',', '') AS FLOAT) {}, ".format(col, columns[col])
-            elif col == 'RUNTIME':
+            elif col == 'RUNTIME':#Makes Runtime comparable
                 added_condition = "CAST({} AS UNSIGNED) {}, ".format(col, columns[col])
-            elif col == 'IMDb_votes':
+            elif col == 'IMDb_votes':#Makes IMDb_votes comparable
                 added_condition = 'CAST(REPLACE({}, ",", "") AS UNSIGNED) {}, '.format(col, columns[col])
-            elif col == 'CAST':
+            elif col == 'CAST':#Makes Cast comparable, and since it is keyword in SQLite it adds ""
                 x = '"{}"'.format(col)
                 added_condition = '{} {}, '.format(x, columns[col])
             else:
                 added_condition = "{} {}, ".format(col, columns[col])
             command += added_condition
-
         command = command[:-2] + ';'
         self.cur.execute(command)
         self.last_fetch = self.cur.fetchall()
@@ -120,6 +123,9 @@ class Movies_Info:
                 print(row)
 
     def filtered_data(self, column, data, out=0):
+        '''
+        Method which filters all movies
+        '''
         if data == 'Ratio':
             movies_with_good_ratio = {}
             x = '"{}"'.format(column)
@@ -132,7 +138,7 @@ class Movies_Info:
                     if word.isdigit():
                         all_numbers.append(word)
                 if len(all_numbers)>1:  
-                    ratio = int(all_numbers[len(all_numbers)-2])/int(all_numbers[len(all_numbers)-1])
+                    ratio = int(all_numbers[len(all_numbers)-2])/int(all_numbers[len(all_numbers)-1])#All awards and nominations are last and second to last
                 if ratio > 0.8:
                     movies_with_good_ratio[all_movies_awards[i][0]]=ratio
                 i+=1
@@ -153,7 +159,7 @@ class Movies_Info:
             for row in rows:
                 income = row[1]
                 x = income.replace("$", "")
-                z = x.replace(",", "")
+                z = x.replace(",", "")#Makes income able to compare
                 if income != 'N/A':
                     if int(z) > 100000000:
                         high_income[row[0]]=income
@@ -164,21 +170,28 @@ class Movies_Info:
             self.cur.execute(command)
             self.last_fetch = self.cur.fetchall()
         elif data == 'NomOsc':
-            self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES WHERE AWARDS LIKE 'Nomi%Oscar%';")
+            self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES WHERE AWARDS LIKE 'Nomi%Oscar%';")#Checks for movies where string shows that movie didn't win oscar but was nominated
             self.last_fetch = self.cur.fetchall()
         else:
-            x = '"{}"'.format(column)
+            x = '"{}"'.format(column)#Assures that keywords are able to process
             self.cur.execute("SELECT TITLE, {} FROM MOVIES WHERE instr({}, ?)".format(x, x), (data,))
             self.last_fetch = self.cur.fetchall()
         if out:
             for row in self.last_fetch:
                 print(row)
     def add_movie_to_database(self, title):
+        '''
+        Adds movie to database and updates it
+        '''
         if title not in self.all_titles:
             self.cur.execute("INSERT INTO MOVIES (TITLE) VALUES(?);",(title,))
             self.update_single_movie(title)
             self.all_titles.append(title)
     def find_with_regex(self, regex, compared_movies=0):
+        '''
+        Finds all appearances of given regex in awards, 
+        mostly it finds numbers in awards column
+        '''
         command = "SELECT TITLE, AWARDS FROM MOVIES WHERE "
         if compared_movies:
             for title in compared_movies:
@@ -211,6 +224,9 @@ class Movies_Info:
         return best
             
     def compare_movies(self, attribute, compared_ones=0, out=0):
+        '''
+        Compares columns in categories and shows the best one of them
+        '''
         all_found = {}
         if attribute.upper() == 'MOST_NOMINATIONS':
             all_found = self.find_with_regex('\d+ nomina', compared_ones)
@@ -227,6 +243,9 @@ class Movies_Info:
         return all_found
 
     def high_scores(self):
+        '''
+        Prints highscores
+        '''
         print("| Column | Movie | Value |\n|--------|-------|-------| ")
         x = self.compare_movies('RUNTIME')
         for key in x:
@@ -249,9 +268,9 @@ class Movies_Info:
 
 
 
-Movies = Movies_Info("movies.sqlite")
-if sys.argv[1] == '--sort_by':
-    if '--defasc' in sys.argv:
+Movies = Movies_Info("movies.sqlite")#Connecting to db
+if sys.argv[1] == '--sort_by':#Sorting option
+    if '--defasc' in sys.argv:#Default sorting changed to ascending
         default = 'ASC'
     else:
         default = 'DESC'
@@ -259,7 +278,7 @@ if sys.argv[1] == '--sort_by':
     last = 0
     for argument in sys.argv[2:]:
         argument = argument.upper()
-        if argument == 'DESC' or argument == 'ASC':
+        if argument == 'DESC' or argument == 'ASC':#Checks if user have given a value for sorting a previous column
             if last and last in Movies.all_columns:
                 given_columns[last] = argument
                 continue
@@ -267,6 +286,7 @@ if sys.argv[1] == '--sort_by':
             given_columns[argument.upper()] = default
             last = argument
     Movies.sort_database(given_columns)
+    #Creates Table string pattern
     to_print = "| Title |"
     for column in given_columns:
         to_print += " %s |"
