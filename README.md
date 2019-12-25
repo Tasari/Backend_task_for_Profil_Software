@@ -1,6 +1,3 @@
-# Backend Task
-Task created for Profil Software
-It works on given database in SQLite, and imdbapi using Python 3
 ## Required libraries:
 * Requests
 ## Functions:
