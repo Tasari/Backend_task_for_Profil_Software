@@ -18,12 +18,19 @@ class Movies_Info:
             print(e)
         self.database = conn
         self.cur = conn.cursor()
+        self.get_columns()
+        self.get_titles()
+
+
+    def get_columns(self):
         self.cur.execute("PRAGMA table_info(MOVIES)")
         self.table_columns_info = self.cur.fetchall()
         self.all_columns = []  # ALL COLUMNS IN DATABASE
         for column in self.table_columns_info:
             self.all_columns.append(column[1])
-        self.last_fetch = 0
+        
+
+    def get_titles(self):
         self.cur.execute("SELECT TITLE FROM MOVIES")
         titles = self.cur.fetchall()
         self.all_titles = (
@@ -32,19 +39,13 @@ class Movies_Info:
         for title in titles:
             self.all_titles.append(title[0])
 
+
     def print_database(self):
         """
         Print all rows in the movies table
         """
         self.cur.execute("SELECT * FROM MOVIES")
         self.last_fetch = self.cur.fetchall()
-        for row in self.last_fetch:
-            print(row)
-
-    def print_last_fetch(self):
-        """
-        Prints last fetch after used method
-        """
         for row in self.last_fetch:
             print(row)
 
@@ -59,10 +60,7 @@ class Movies_Info:
             self.cur.execute(
                 """UPDATE MOVIES SET TITLE = ? WHERE TITLE = ?""", (target, Title)
             )
-        request = requests.get(
-            "http://www.omdbapi.com/", params={"t": Title, "apikey": "b88afbe7"},
-        )
-        dictionary = ast.literal_eval(request.text)
+        data_dictionary = self.get_data(Title)
         all_criteria = (
             "Year",
             "Runtime",
@@ -82,21 +80,31 @@ class Movies_Info:
         next(it)  # Starts iteration from Year column in database
         index = 0
         for column in it:
-            if len(dictionary["Year"]) > 4:  # In case Year is invalid like in 'Ben Hur'
-                dictionary["Year"] = re.search("^\d{4}", dictionary["Year"]).group(0)
+            if len(data_dictionary["Year"]) > 4:  # In case Year is invalid like in 'Ben Hur'
+                data_dictionary["Year"] = re.search("^\d{4}", data_dictionary["Year"]).group(0)
             try:  # Assures that if there is no given column in data from OMDb program don't crash
-                x = dictionary[all_criteria[index]]
+                x = data_dictionary[all_criteria[index]]
             except KeyError:
                 x = "N/A"
             try:
                 self.cur.execute(
                     """UPDATE MOVIES SET {} = ? WHERE TITLE = ?""".format(column),
-                    (x, dictionary["Title"]),
+                    (x, data_dictionary["Title"]),
                 )
                 index += 1
             except Error as e:
                 print(e)
                 index += 1
+
+
+
+    def get_data(self, Title):
+        request = requests.get(
+            "http://www.omdbapi.com/", params={"t": Title, "apikey": "b88afbe7"},
+        )
+        dictionary = ast.literal_eval(request.text)
+        return dictionary
+
 
     def update_database(self):
         """
