@@ -125,15 +125,8 @@ class Movies_Info:
         """
         Sorting database by multiple columns, main column is given as argument
         """
-        string = ""  # String that collects command that should be used in execute
-        for table_col in columns.keys():
-            if table_col == "CAST":
-                x = '"{}"'.format(table_col)
-                string += "{}, ".format(x)
-            else:
-                string += "{}, ".format(table_col)
-        string = string[:-2] + " "
-        command = "SELECT TITLE, {}FROM MOVIES ".format(string)
+        columns_string = self.collect_sort_columns(columns)
+        command = "SELECT TITLE, {}FROM MOVIES ".format(columns_string)
         if titles:
             command += "WHERE "
             for title in titles:
@@ -165,6 +158,18 @@ class Movies_Info:
         if out:
             for row in self.last_fetch:
                 print(row)
+
+
+    def collect_sort_columns(self, columns):
+        string = ""  # String that collects command that should be used in execute
+        for table_col in columns.keys():
+            if table_col == "CAST":
+                x = '"{}"'.format(table_col)
+                string += "{}, ".format(x)
+            else:
+                string += "{}, ".format(table_col)
+        string = string[:-2] + " "
+        return string
 
 
     def filtered_data(self, column, data, out=0):
