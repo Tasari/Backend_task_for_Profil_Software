@@ -28,6 +28,7 @@ class Movies_Info:
         self.all_columns = []  # ALL COLUMNS IN DATABASE
         for column in self.table_columns_info:
             self.all_columns.append(column[1])
+        self.all_columns = tuple(self.all_columns)
         
 
     def get_titles(self):
@@ -49,6 +50,7 @@ class Movies_Info:
         for row in self.last_fetch:
             print(row)
 
+
     def update_single_movie(self, Title):
         """
         Updating single movie in database
@@ -60,28 +62,20 @@ class Movies_Info:
             self.cur.execute(
                 """UPDATE MOVIES SET TITLE = ? WHERE TITLE = ?""", (target, Title)
             )
-        data_dictionary = self.get_data(Title)
-        all_criteria = (
-            "Year",
-            "Runtime",
-            "Genre",
-            "Director",
-            "Actors",
-            "Writer",
-            "Language",
-            "Country",
-            "Awards",
-            "imdbRating",
-            "imdbVotes",
-            "BoxOffice",
-        )
-        it = iter(self.all_columns)
-        next(it)
-        next(it)  # Starts iteration from Year column in database
+        data_dictionary = self.change_dictionary_key_case(self.get_data_dict(Title))
+        all_criteria = self.all_columns[2:]
+        self.update_columns(data_dictionary, all_criteria)
+        all_criteria = []
+        for column in self.all_columns[2:]:
+            all_criteria.append(column.lower().replace('_', ''))
+        self.update_columns(data_dictionary, all_criteria)
+
+
+    def update_columns(self, data_dictionary, all_criteria):
+        it = iter(self.all_columns[2:]) # Starts iteration from Year column in database
         index = 0
+        self.repair_invalid_data(data_dictionary)
         for column in it:
-            if len(data_dictionary["Year"]) > 4:  # In case Year is invalid like in 'Ben Hur'
-                data_dictionary["Year"] = re.search("^\d{4}", data_dictionary["Year"]).group(0)
             try:  # Assures that if there is no given column in data from OMDb program don't crash
                 x = data_dictionary[all_criteria[index]]
             except KeyError:
@@ -89,16 +83,27 @@ class Movies_Info:
             try:
                 self.cur.execute(
                     """UPDATE MOVIES SET {} = ? WHERE TITLE = ?""".format(column),
-                    (x, data_dictionary["Title"]),
+                    (x, data_dictionary["title"]),
                 )
-                index += 1
             except Error as e:
                 print(e)
+            finally:
                 index += 1
 
 
+    def change_dictionary_key_case(self, dictionary):
+        dictionary_new = {}
+        for k, v in dictionary.items():    
+            dictionary_new[k.lower()] = v
+        return dictionary_new
 
-    def get_data(self, Title):
+
+    def repair_invalid_data(self, data_dictionary):
+            if len(data_dictionary["year"]) > 4:  # In case Year is invalid like in 'Ben Hur'
+                data_dictionary["year"] = re.search("^\d{4}", data_dictionary["year"]).group(0)
+
+
+    def get_data_dict(self, Title):
         request = requests.get(
             "http://www.omdbapi.com/", params={"t": Title, "apikey": "b88afbe7"},
         )
@@ -114,6 +119,7 @@ class Movies_Info:
         rows = self.cur.fetchall()
         for row in rows:
             self.update_single_movie(row[1])
+
 
     def sort_database(self, columns={"ID": "ASC"}, titles=0, default="ASC", out=0):
         """
@@ -159,6 +165,7 @@ class Movies_Info:
         if out:
             for row in self.last_fetch:
                 print(row)
+
 
     def filtered_data(self, column, data, out=0):
         """
@@ -224,6 +231,7 @@ class Movies_Info:
             for row in self.last_fetch:
                 print(row)
 
+
     def add_movie_to_database(self, title):
         """
         Adds movie to database and updates it
@@ -232,6 +240,7 @@ class Movies_Info:
             self.cur.execute("INSERT INTO MOVIES (TITLE) VALUES(?);", (title,))
             self.update_single_movie(title)
             self.all_titles.append(title)
+
 
     def find_with_regex(self, regex, compared_movies=0):
         """
@@ -269,6 +278,7 @@ class Movies_Info:
                 best[key] = all_awards[key]
         return best
 
+
     def compare_movies(self, attribute, compared_ones=0, out=0):
         """
         Compares columns in categories and shows the best one of them
@@ -287,6 +297,7 @@ class Movies_Info:
             self.sort_database({attribute: "DESC"})
             all_found[self.last_fetch[0][0]] = str(self.last_fetch[0][1])
         return all_found
+
 
     def high_scores(self):
         """
@@ -366,4 +377,5 @@ elif sys.argv[1] == "--highscores":
     Movies.high_scores()
 elif sys.argv[1] == "--update":
     Movies.update_database()
-Movies.database.commit()
+Movies.print_database()
+#Movies.database.commit()
