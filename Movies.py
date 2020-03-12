@@ -21,7 +21,6 @@ class Movies_Info:
         self.get_columns()
         self.get_titles()
 
-
     def get_columns(self):
         self.cur.execute("PRAGMA table_info(MOVIES)")
         self.table_columns_info = self.cur.fetchall()
@@ -29,7 +28,6 @@ class Movies_Info:
         for column in self.table_columns_info:
             self.all_columns.append(column[1])
         self.all_columns = tuple(self.all_columns)
-        
 
     def get_titles(self):
         self.cur.execute("SELECT TITLE FROM MOVIES")
@@ -40,7 +38,6 @@ class Movies_Info:
         for title in titles:
             self.all_titles.append(title[0])
 
-
     def print_database(self):
         """
         Print all rows in the movies table
@@ -49,7 +46,6 @@ class Movies_Info:
         self.last_fetch = self.cur.fetchall()
         for row in self.last_fetch:
             print(row)
-
 
     def update_single_movie(self, Title):
         """
@@ -67,12 +63,11 @@ class Movies_Info:
         self.update_columns(data_dictionary, all_criteria)
         all_criteria = []
         for column in self.all_columns[2:]:
-            all_criteria.append(column.lower().replace('_', ''))
+            all_criteria.append(column.lower().replace("_", ""))
         self.update_columns(data_dictionary, all_criteria)
 
-
     def update_columns(self, data_dictionary, all_criteria):
-        it = iter(self.all_columns[2:]) # Starts iteration from Year column in database
+        it = iter(self.all_columns[2:])  # Starts iteration from Year column in database
         index = 0
         self.repair_invalid_data(data_dictionary)
         for column in it:
@@ -90,18 +85,19 @@ class Movies_Info:
             finally:
                 index += 1
 
-
     def change_dictionary_key_case(self, dictionary):
         dictionary_new = {}
-        for k, v in dictionary.items():    
+        for k, v in dictionary.items():
             dictionary_new[k.lower()] = v
         return dictionary_new
 
-
     def repair_invalid_data(self, data_dictionary):
-            if len(data_dictionary["year"]) > 4:  # In case Year is invalid like in 'Ben Hur'
-                data_dictionary["year"] = re.search("^\d{4}", data_dictionary["year"]).group(0)
-
+        if (
+            len(data_dictionary["year"]) > 4
+        ):  # In case Year is invalid like in 'Ben Hur'
+            data_dictionary["year"] = re.search(
+                "^\d{4}", data_dictionary["year"]
+            ).group(0)
 
     def get_data_dict(self, Title):
         request = requests.get(
@@ -109,7 +105,6 @@ class Movies_Info:
         )
         dictionary = ast.literal_eval(request.text)
         return dictionary
-
 
     def update_database(self):
         """
@@ -120,7 +115,6 @@ class Movies_Info:
         for row in rows:
             self.update_single_movie(row[1])
 
-
     def sort_database(self, columns={"ID": "ASC"}, titles=0, default="ASC", out=0):
         """
         Sorting database by multiple columns, main column is given as argument
@@ -128,10 +122,7 @@ class Movies_Info:
         columns_string = self.collect_sort_columns(columns)
         command = "SELECT TITLE, {}FROM MOVIES ".format(columns_string)
         if titles:
-            command += "WHERE "
-            for title in titles:
-                command += 'TITLE = "{}" OR '.format(title)
-            command = command[:-3]
+            command += self.add_movies_to_command(titles)
         command += "ORDER BY "
         for col in columns.keys():
             if col == "BOX_OFFICE":  # Makes Box office comparable
@@ -159,6 +150,12 @@ class Movies_Info:
             for row in self.last_fetch:
                 print(row)
 
+    def add_movies_to_command(self, titles):        
+        command = "WHERE "
+        for title in titles:
+            command += 'TITLE = "{}" OR '.format(title)
+        command = command[:-3]
+        return command
 
     def collect_sort_columns(self, columns):
         string = ""  # String that collects command that should be used in execute
@@ -170,7 +167,6 @@ class Movies_Info:
                 string += "{}, ".format(table_col)
         string = string[:-2] + " "
         return string
-
 
     def filtered_data(self, column, data, out=0):
         """
@@ -236,7 +232,6 @@ class Movies_Info:
             for row in self.last_fetch:
                 print(row)
 
-
     def add_movie_to_database(self, title):
         """
         Adds movie to database and updates it
@@ -245,7 +240,6 @@ class Movies_Info:
             self.cur.execute("INSERT INTO MOVIES (TITLE) VALUES(?);", (title,))
             self.update_single_movie(title)
             self.all_titles.append(title)
-
 
     def find_with_regex(self, regex, compared_movies=0):
         """
@@ -283,7 +277,6 @@ class Movies_Info:
                 best[key] = all_awards[key]
         return best
 
-
     def compare_movies(self, attribute, compared_ones=0, out=0):
         """
         Compares columns in categories and shows the best one of them
@@ -302,7 +295,6 @@ class Movies_Info:
             self.sort_database({attribute: "DESC"})
             all_found[self.last_fetch[0][0]] = str(self.last_fetch[0][1])
         return all_found
-
 
     def high_scores(self):
         """
@@ -383,4 +375,4 @@ elif sys.argv[1] == "--highscores":
 elif sys.argv[1] == "--update":
     Movies.update_database()
 Movies.print_database()
-#Movies.database.commit()
+# Movies.database.commit()
