@@ -176,50 +176,9 @@ class Movies_Info:
         Method which filters all movies
         """
         if data == "Ratio":
-            movies_with_good_ratio = {}
-            x = '"{}"'.format(column)
-            self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES")
-            all_movies_awards = self.cur.fetchall()
-            i = 0
-            for movie_award in all_movies_awards:
-                all_numbers = []
-                for word in movie_award[1].split():
-                    if word.isdigit():
-                        all_numbers.append(word)
-                if len(all_numbers) > 1:
-                    ratio = int(all_numbers[len(all_numbers) - 2]) / int(
-                        all_numbers[len(all_numbers) - 1]
-                    )  # All awards and nominations are last and second to last
-                if ratio > 0.8:
-                    movies_with_good_ratio[all_movies_awards[i][0]] = ratio
-                i += 1
-            command = "SELECT TITLE FROM MOVIES WHERE "
-            for movie_with_good_ratio in movies_with_good_ratio.keys():
-                command = command + "TITLE = '{}' OR ".format(movie_with_good_ratio)
-            command = command[:-4] + ";"
-            self.cur.execute(command)
-            self.last_fetch = self.cur.fetchall()
-            return movies_with_good_ratio
-            if out:
-                for row in self.last_fetch:
-                    print(row[0] + " Ratio: " + str(movies_with_good_ratio[row[0]]))
+            return self.ratio_filter(column, out)
         elif data == "Income":
-            self.cur.execute("SELECT TITLE, BOX_OFFICE FROM MOVIES")
-            rows = self.cur.fetchall()
-            high_income = {}
-            for row in rows:
-                income = row[1]
-                x = income.replace("$", "")
-                z = x.replace(",", "")  # Makes income able to compare
-                if income != "N/A":
-                    if int(z) > 100000000:
-                        high_income[row[0]] = income
-            command = "SELECT TITLE, BOX_OFFICE FROM MOVIES WHERE "
-            for high_income_movie in high_income.keys():
-                command = command + "TITLE = '{}' OR ".format(high_income_movie)
-            command = command[:-4] + ";"
-            self.cur.execute(command)
-            self.last_fetch = self.cur.fetchall()
+            return self.income_filter()
         elif data == "NomOsc":
             self.cur.execute(
                 "SELECT TITLE, AWARDS FROM MOVIES WHERE AWARDS LIKE 'Nomi%Oscar%';"
@@ -234,6 +193,53 @@ class Movies_Info:
         if out:
             for row in self.last_fetch:
                 print(row)
+
+    def income_filter(self):
+        self.cur.execute("SELECT TITLE, BOX_OFFICE FROM MOVIES")
+        rows = self.cur.fetchall()
+        high_income = {}
+        for row in rows:
+            income = row[1]
+            x = income.replace("$", "")
+            z = x.replace(",", "")  # Makes income able to compare
+            if income != "N/A":
+                if int(z) > 100000000:
+                    high_income[row[0]] = income
+        command = "SELECT TITLE, BOX_OFFICE FROM MOVIES WHERE "
+        for high_income_movie in high_income.keys():
+            command = command + "TITLE = '{}' OR ".format(high_income_movie)
+        command = command[:-4] + ";"
+        self.cur.execute(command)
+        self.last_fetch = self.cur.fetchall()
+
+    def ratio_filter(self, column, out):
+        movies_with_good_ratio = {}
+        x = '"{}"'.format(column)
+        self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES")
+        all_movies_awards = self.cur.fetchall()
+        i = 0
+        for movie_award in all_movies_awards:
+            all_numbers = []
+            for word in movie_award[1].split():
+                if word.isdigit():
+                    all_numbers.append(word)
+            if len(all_numbers) > 1:
+                ratio = int(all_numbers[len(all_numbers) - 2]) / int(
+                    all_numbers[len(all_numbers) - 1]
+                )  # All awards and nominations are last and second to last
+            if ratio > 0.8:
+                movies_with_good_ratio[all_movies_awards[i][0]] = ratio
+            i += 1
+        command = "SELECT TITLE FROM MOVIES WHERE "
+        for movie_with_good_ratio in movies_with_good_ratio.keys():
+            command = command + "TITLE = '{}' OR ".format(movie_with_good_ratio)
+        command = command[:-4] + ";"
+        self.cur.execute(command)
+        self.last_fetch = self.cur.fetchall()
+        if out:
+            for row in self.last_fetch:
+                print(row[0] + " Ratio: " + str(movies_with_good_ratio[row[0]]))
+        return movies_with_good_ratio
 
     def add_movie_to_database(self, title):
         """
