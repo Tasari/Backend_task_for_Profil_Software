@@ -124,6 +124,15 @@ class Movies_Info:
         if titles:
             command += self.add_movies_to_command(titles)
         command += "ORDER BY "
+        command += self.add_columns_and_modes_to_command(columns)        
+        command = command[:-2] + ";"
+        self.cur.execute(command)
+        self.last_fetch = self.cur.fetchall()
+        if out:
+            for row in self.last_fetch:
+                print(row)
+
+    def add_columns_and_modes_to_command(self, columns):
         for col in columns.keys():
             if col == "BOX_OFFICE":  # Makes Box office comparable
                 added_condition = "CAST(REPLACE(SUBSTR({},2), ',', '') AS FLOAT) {}, ".format(
@@ -142,13 +151,7 @@ class Movies_Info:
                 added_condition = "{} {}, ".format(x, columns[col])
             else:
                 added_condition = "{} {}, ".format(col, columns[col])
-            command += added_condition
-        command = command[:-2] + ";"
-        self.cur.execute(command)
-        self.last_fetch = self.cur.fetchall()
-        if out:
-            for row in self.last_fetch:
-                print(row)
+            return added_condition
 
     def add_movies_to_command(self, titles):        
         command = "WHERE "
