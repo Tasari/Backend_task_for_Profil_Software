@@ -120,11 +120,11 @@ class Movies_Info:
         Sorting database by multiple columns, main column is given as argument
         """
         columns_string = self.collect_sort_columns(columns)
-        command = "SELECT TITLE, {}FROM MOVIES ".format(columns_string)
+        command = "SELECT TITLE, {}FROM MOVIES".format(columns_string)
         if titles:
             command += self.add_movies_to_command(titles)
-        command += "ORDER BY "
-        command += self.add_columns_and_modes_to_command(columns)        
+        command += " ORDER BY "
+        command += self.add_columns_and_modes_to_command(columns)
         command = command[:-2] + ";"
         self.cur.execute(command)
         self.last_fetch = self.cur.fetchall()
@@ -153,8 +153,8 @@ class Movies_Info:
                 added_condition = "{} {}, ".format(col, columns[col])
             return added_condition
 
-    def add_movies_to_command(self, titles):        
-        command = "WHERE "
+    def add_movies_to_command(self, titles):
+        command = " WHERE "
         for title in titles:
             command += 'TITLE = "{}" OR '.format(title)
         command = command[:-3]
@@ -214,7 +214,6 @@ class Movies_Info:
 
     def ratio_filter(self, column, out):
         movies_with_good_ratio = {}
-        x = '"{}"'.format(column)
         self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES")
         all_movies_awards = self.cur.fetchall()
         i = 0
@@ -255,17 +254,27 @@ class Movies_Info:
         Finds all appearances of given regex in awards, 
         mostly it finds numbers in awards column
         """
-        command = "SELECT TITLE, AWARDS FROM MOVIES WHERE "
+        command = "SELECT TITLE, AWARDS FROM MOVIES"
         if compared_movies:
-            for title in compared_movies:
-                command += 'TITLE = "{}" OR '.format(title)
-            command = command[:-4]
-            print(command)
-            self.cur.execute(command)
-        else:
-            self.cur.execute("SELECT TITLE, AWARDS FROM MOVIES")
+            command += self.add_movies_to_command(compared_movies)
+        self.cur.execute(command)
         self.last_fetch = self.cur.fetchall()
-        expression = re.compile(regex)
+        return self.get_max_value_titles(
+            self.collect_all_movies_awards(re.compile(regex))
+        )
+
+    def get_max_value_titles(self, all_awards):
+        if len(all_awards) > 0:
+            max_val = max(all_awards.values())
+        else:
+            max_val = 0
+        best = {}
+        for key in all_awards:
+            if all_awards[key] == max_val:
+                best[key] = all_awards[key]
+        return best
+
+    def collect_all_movies_awards(self, expression):
         all_awards = {}
         for row in self.last_fetch:
             found = expression.findall(row[1])
@@ -276,15 +285,7 @@ class Movies_Info:
                         all_awards[row[0]] = int(word)
                     except ValueError:
                         pass
-        if len(all_awards) > 0:
-            max_val = max(all_awards.values())
-        else:
-            max_val = 0
-        best = {}
-        for key in all_awards:
-            if all_awards[key] == max_val:
-                best[key] = all_awards[key]
-        return best
+        return all_awards
 
     def compare_movies(self, attribute, compared_ones=0, out=0):
         """
@@ -301,7 +302,7 @@ class Movies_Info:
             self.sort_database({attribute.upper(): "DESC"}, compared_ones)
             all_found[self.last_fetch[0][0]] = str(self.last_fetch[0][1])
         else:
-            self.sort_database({attribute: "DESC"})
+            self.sort_database({attribute.upper(): "DESC"})
             all_found[self.last_fetch[0][0]] = str(self.last_fetch[0][1])
         return all_found
 
@@ -329,7 +330,7 @@ class Movies_Info:
         for key in x:
             print("| IMDB Rating | {} | {} |".format(key, x[key]))
 
-
+    
 Movies = Movies_Info("movies.sqlite")  # Connecting to db
 if sys.argv[1] == "--sort_by":  # Sorting option
     if "--defasc" in sys.argv:  # Default sorting changed to ascending
@@ -384,4 +385,4 @@ elif sys.argv[1] == "--highscores":
 elif sys.argv[1] == "--update":
     Movies.update_database()
 Movies.print_database()
-# Movies.database.commit()
+#Movies.database.commit()
